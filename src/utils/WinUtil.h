@@ -1,14 +1,6 @@
 /* Copyright 2021 the SumatraPDF project authors (see AUTHORS file).
    License: Simplified BSD (see COPYING.BSD) */
 
-// the following are only defined if _WIN32_WINNT >= 0x0600 and we use 0x0500
-#ifndef USER_DEFAULT_SCREEN_DPI
-#define USER_DEFAULT_SCREEN_DPI 96
-#endif
-#ifndef WM_MOUSEHWHEEL
-#define WM_MOUSEHWHEEL 0x020E
-#endif
-
 #define NO_COLOR (COLORREF) - 1
 
 #define WIN_COL_WHITE RGB(0xff, 0xff, 0xff)
@@ -30,7 +22,8 @@ Rect MapRectToWindow(Rect rect, HWND hwndFrom, HWND hwndTo);
 void Edit_SelectAll(HWND hwnd);
 void ListBox_AppendString_NoSort(HWND hwnd, WCHAR* txt);
 
-BOOL SafeCloseHandle(HANDLE* h);
+bool IsValidHandle(HANDLE);
+bool SafeCloseHandle(HANDLE*);
 void FillWndClassEx(WNDCLASSEX& wcex, const WCHAR* clsName, WNDPROC wndproc);
 void MoveWindow(HWND hwnd, Rect rect);
 void MoveWindow(HWND hwnd, RECT* r);
@@ -58,7 +51,9 @@ bool DeleteRegKey(HKEY keySub, const WCHAR* keyName, bool resetACLFirst = false)
 WCHAR* GetSpecialFolder(int csidl, bool createIfMissing = false);
 
 void DisableDataExecution();
-void RedirectIOToConsole();
+bool RedirectIOToConsole();
+void SendEnterKeyToConsole();
+
 WCHAR* GetExePath();
 WCHAR* GetExeDir();
 WCHAR* GetSystem32Dir();
@@ -79,8 +74,8 @@ bool IsCtrlPressed();
 
 HFONT CreateSimpleFont(HDC hdc, const WCHAR* fontName, int fontSize);
 
-Rect ShiftRectToWorkArea(Rect rect, bool bFully = false);
-Rect GetWorkAreaRect(Rect rect);
+Rect ShiftRectToWorkArea(Rect rect, HWND hwnd = nullptr, bool bFully = false);
+Rect GetWorkAreaRect(Rect rect, HWND hwnd);
 void LimitWindowSizeToScreen(HWND hwnd, SIZE& size);
 Rect GetFullscreenRect(HWND);
 Rect GetVirtualScreenRect();
@@ -269,6 +264,7 @@ void HwndSetFont(HWND, HFONT);
 HFONT HwndGetFont(HWND);
 Size HwndMeasureText(HWND hwnd, const WCHAR* txt, HFONT font);
 void HwndPositionToTheRightOf(HWND hwnd, HWND hwndRelative);
+void HwndPositionInCenterOf(HWND hwnd, HWND hwndRelative);
 void HwndSendCommand(HWND hwnd, int cmdId);
 
 void TbSetButtonInfo(HWND hwnd, int buttonId, TBBUTTONINFO* info);

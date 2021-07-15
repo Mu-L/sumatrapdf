@@ -2,7 +2,7 @@
 To generate Visual Studio files (in vs2017/ directory), run:
 scripts\premake-regenerate-vs-projects.ps1
 
-I'm using premake5 alpha12 from http://premake.github.io/download.html#v5
+I'm using premake5 alpha12 from https://premake.github.io/download.html#v5
 
 Note about nasm: when providing "-I foo/bar/" flag to nasm.exe, it must be
 "foo/bar/" and not just "foo/bar".
@@ -51,39 +51,56 @@ Prefast:
 
 include("premake5.files.lua")
 
--- https://devblogs.microsoft.com/cppblog/addresssanitizer-asan-for-windows-with-msvc/
--- https://devblogs.microsoft.com/cppblog/asan-for-windows-x64-and-debug-build-support/
-function configAsan()
-  filter "platforms:x32_asan"
-  --links { "clang_rt.asan-i386.lib", "clang_rt.asan_cxx-i386.lib" }
-  linkoptions { "/WHOLEARCHIVE:clang_rt.asan-i386.lib", "/WHOLEARCHIVE:clang_rt.asan_cxx-i386.lib"}
-  filter {}
+-- TODO: could fold 9 libraries used by mupdf into a single
+-- project mupdf-libs, to make solution smaller
 
-  -- TODO: this crashes on startup in memset.asm
-  filter "platforms:x64_asan"
-  -- links { "clang_rt.asan-x86_64.lib", "clang_rt.asan_cxx-x86_64.lib" }
-  linkoptions { "/WHOLEARCHIVE:clang_rt.asan-x86_64.lib", "/WHOLEARCHIVE:clang_rt.asan_cxx-x86_64.lib"}
-  filter {}
-  
-end
-
+-- to make debug builds faster, we compile stable libraries (freetype, libjpeg etc.)
+-- in release mode even in debug builds
 function regconf()
+  defines { "_HAS_ITERATOR_DEBUGGING=0" }
   filter "configurations:Debug"
     defines { "DEBUG" }
-  filter {}
 
   filter "configurations:Release*"
     defines { "NDEBUG" }
+    optimize "Size"
+
+  -- no ltcg in asan builds
+  filter { "configurations:Release*", "platforms:x32 or x64" }
     flags {
       "LinkTimeOptimization",
     }
-    optimize "On"
+
+  filter {}
+  runtime "Release"
+end
+
+-- config for stable libraries where debug build is done with optimization
+function optconf()
+  optimize "Size"
+  undefines { "DEBUG" }
+  defines { "NDEBUG" }
+
+  -- we mix Deubg / Release compilation between projects
+  -- but all linked modules have to use the same type
+  -- of c libraries, so we use release C libs
+  -- and we disable C++ iterator debugging because it also
+  -- must be consistent across modules
+  defines { "_HAS_ITERATOR_DEBUGGING=0" }
+  runtime "Release"
+
+  -- no ltcg in asan builds
+  filter { "configurations:Release*", "platforms:x32 or x64" }
+    flags {
+      "LinkTimeOptimization",
+    }
+
   filter {}
 end
 
 workspace "SumatraPDF"
   configurations { "Debug", "Release", "ReleaseAnalyze", }
-  platforms { "x32", "x32_asan", "x64", "x64_asan", "x64_ramicro" }
+  platforms { "x32", "x64", "x64_asan" }
   startproject "SumatraPDF"
 
   filter "platforms:x32 or x32_asan"
@@ -94,19 +111,12 @@ workspace "SumatraPDF"
     buildoptions { "/fsanitize=address"}
     defines { "ASAN_BUILD=1" }
     -- disablewarnings { "4731" }
-    defines { "RAMICRO"}
-    resdefines { "RAMICRO" }
   filter {}
 
-  filter "platforms:x64 or x64_asan or x64_ramicro"
+  filter "platforms:x64 or x64_asan"
      architecture "x86_64"
      -- strangely this is not set by default for rc.exe
      resdefines { "_WIN64" }
-  filter {}
-
-  filter "platforms:x64_ramicro"
-     resdefines { "RAMICRO" }
-     defines { "RAMICRO"}
   filter {}
 
   disablewarnings { "4127", "4189", "4324", "4458", "4522", "4611", "4702", "4800", "6319" }
@@ -147,19 +157,11 @@ workspace "SumatraPDF"
   filter {}
 
   filter {"platforms:x64_asan", "configurations:Release"}
-    targetdir "out/re64_asan"
+    targetdir "out/rel64_asan"
   filter {"platforms:x64_asan", "configurations:ReleaseAnalyze"}
     targetdir "out/rel64_prefast_asan"
   filter {"platforms:x64_asan", "configurations:Debug"}
     targetdir "out/dbg64_asan"
-  filter {}
-
-  filter {"platforms:x64_ramicro", "configurations:Release"}
-    targetdir "out/rel64ra"
-  filter {"platforms:x64_ramicro", "configurations:ReleaseAnalyze"}
-    targetdir "out/rel64ra_prefast"
-  filter {"platforms:x64_ramicro", "configurations:Debug"}
-    targetdir "out/dbg64ra"
   filter {}
 
   objdir "%{cfg.targetdir}/obj"
@@ -194,12 +196,11 @@ workspace "SumatraPDF"
     "_WIN32_WINNT=0x0603"
   }
 
-  include("premake5.opt.lua")
 
   project "zlib"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     disablewarnings { "4131", "4244", "4245", "4267", "4996" }
     zlib_files()
 
@@ -207,7 +208,7 @@ workspace "SumatraPDF"
   project "unrar"
     kind "StaticLib"
     language "C++"
-    regconf()
+    optconf()
     defines { "UNRAR", "RARDLL", "SILENT" }
     disablewarnings { "4100", "4201", "4211", "4244", "4389", "4456", "4459", "4701", "4702", "4706", "4709", "4731", "4996" }
     -- unrar uses exception handling in savepos.hpp but I don't want to enable it
@@ -219,12 +220,11 @@ workspace "SumatraPDF"
     includedirs { "ext/unrar" }
     unrar_files()
 
-
   project "libdjvu"
     kind "StaticLib"
     characterset ("MBCS")
     language "C++"
-    regconf()
+    optconf()
     defines {
       "_CRT_SECURE_NO_WARNINGS",
       "NEED_JPEG_DECODER",
@@ -241,21 +241,10 @@ workspace "SumatraPDF"
     includedirs { "ext/libjpeg-turbo" }
     libdjvu_files()
 
-
-  project "wdl"
-    kind "StaticLib"
-    language "C++"
-    regconf()
-    includedirs  { "ext/WDL" }
-    disablewarnings { "4018", "4100", "4244", "4505", "4456", "4457", "4245", "4505", "4701", "4706", "4996" }
-    characterset "MBCS"
-    wdl_files()
-
-
   project "unarrlib"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     -- TODO: for bzip2, need BZ_NO_STDIO and BZ_DEBUG=0
     -- TODO: for lzma, need _7ZIP_PPMD_SUPPPORT
     defines { "HAVE_ZLIB", "HAVE_BZIP2", "HAVE_7Z", "BZ_NO_STDIO", "_7ZIP_PPMD_SUPPPORT" }
@@ -264,22 +253,20 @@ workspace "SumatraPDF"
     includedirs { "ext/zlib", "ext/bzip2", "ext/lzma/C" }
     unarr_files()
 
-
   project "jbig2dec"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     defines { "_CRT_SECURE_NO_WARNINGS", "HAVE_STRING_H=1", "JBIG_NO_MEMENTO" }
     disablewarnings { "4018", "4100", "4146", "4244", "4267", "4456", "4701" }
     includedirs { "ext/jbig2dec" }
     jbig2dec_files()
 
-
   project "openjpeg"
     kind "StaticLib"
     language "C"
-    regconf()
-    disablewarnings { "4100", "4244", "4310" }
+    optconf()
+    disablewarnings { "4100", "4244", "4310", "4389", "4456" }
     -- openjpeg has opj_config_private.h for such over-rides
     -- but we can't change it because we bring openjpeg as submodule
     -- and we can't provide our own in a different directory because
@@ -288,20 +275,18 @@ workspace "SumatraPDF"
     defines { "_CRT_SECURE_NO_WARNINGS", "USE_JPIP", "OPJ_STATIC", "OPJ_EXPORTS" }
     openjpeg_files()
 
-
   project "libwebp"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     disablewarnings { "4204", "4244", "4057", "4245", "4310" }
     includedirs { "ext/libwebp" }
     libwebp_files()
 
-
   project "libjpeg-turbo"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     defines { "_CRT_SECURE_NO_WARNINGS" }
     disablewarnings { "4018", "4100", "4244", "4245" }
     includedirs { "ext/libjpeg-turbo", "ext/libjpeg-turbo/simd" }
@@ -318,7 +303,7 @@ workspace "SumatraPDF"
        }
     filter {}
 
-    filter {'files:**.asm', 'platforms:x64 or x64_asan or x64_ramicro'}
+    filter {'files:**.asm', 'platforms:x64 or x64_asan'}
       buildmessage '%{file.relpath}'
       buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
       buildcommands {
@@ -327,11 +312,10 @@ workspace "SumatraPDF"
     filter {}
     libjpeg_turbo_files()
 
-
   project "freetype"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     defines {
       "FT2_BUILD_LIBRARY",
       "FT_CONFIG_MODULES_H=\"slimftmodules.h\"",
@@ -344,16 +328,15 @@ workspace "SumatraPDF"
   project "lcms2"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     disablewarnings { "4100" }
     includedirs { "ext/lcms2/include" }
     lcms2_files()
 
-
   project "harfbuzz"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     includedirs { "ext/harfbuzz/src/hb-ucdn", "mupdf/scripts/freetype", "ext/freetype/include" }
     defines {
       "_CRT_SECURE_NO_WARNINGS",
@@ -370,30 +353,27 @@ workspace "SumatraPDF"
     disablewarnings { "4100", "4146", "4244", "4245", "4267", "4456", "4457", "4459", "4701", "4702", "4706" }
     harfbuzz_files()
 
-
   project "mujs"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     includedirs { "ext/mujs" }
     disablewarnings { "4090", "4100", "4310", "4702", "4706" }
     files { "ext/mujs/one.c", "ext/mujs/mujs.h" }
 
-
   project "chm"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     defines { "UNICODE", "_UNICODE", "PPC_BSTR"}
     disablewarnings { "4018", "4057", "4189", "4244", "4267", "4295", "4701", "4706", "4996" }
     files { "ext/CHMLib/src/chm_lib.c", "ext/CHMLib/src/lzx.c" }
-
 
   project "engines"
     kind "StaticLib"
     language "C++"
     cppdialect "C++latest"
-    regconf()
+    optconf()
     disablewarnings {
       "4018", "4057", "4100", "4189", "4244", "4267", "4295", "4457",
       "4701", "4706", "4819", "4838"
@@ -403,11 +383,10 @@ workspace "SumatraPDF"
     engines_files()
     links { "chm" }
 
-
   project "gumbo"
     kind "StaticLib"
     language "C"
-    regconf()
+    optconf()
     disablewarnings { "4018", "4100", "4132", "4204", "4244", "4245", "4267", 
     "4305", "4306", "4389", "4456", "4701" }
     includedirs { "ext/gumbo-parser/include", "ext/gumbo-parser/visualc/include" }
@@ -427,7 +406,7 @@ workspace "SumatraPDF"
 
     disablewarnings {
       "4005", "4018", "4057", "4100", "4115", "4130", "4204", "4206", "4245", "4267",
-      "4295", "4305", "4389", "4456", "4703", "4706"
+      "4295", "4305", "4389", "4456", "4457", "4703", "4706"
     }
     -- force including mupdf/scripts/openjpeg/opj_config_private.h
     -- with our build over-rides
@@ -456,7 +435,7 @@ workspace "SumatraPDF"
        }
     filter {}
 
-    filter {'files:**.asm', 'platforms:x64 or x64_asan or x64_ramicro'}
+    filter {'files:**.asm', 'platforms:x64 or x64_asan'}
       buildmessage 'Compiling %{file.relpath}'
       buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
       buildcommands {
@@ -467,11 +446,10 @@ workspace "SumatraPDF"
     mupdf_files()
     links { "zlib", "freetype", "libjpeg-turbo", "jbig2dec", "openjpeg", "lcms2", "harfbuzz", "mujs", "gumbo" }
 
-  -- regular build with distinct debug / release builds
-  project "libmupdf-reg"
+  project "libmupdf"
     kind "SharedLib"
     language "C"
-    regconf()
+    optconf()
     disablewarnings { "4206", "4702" }
     defines { "FZ_ENABLE_SVG" }
     -- premake has logic in vs2010_vcxproj.lua that only sets PlatformToolset
@@ -488,30 +466,6 @@ workspace "SumatraPDF"
       "winspool", "wininet", "urlmon", "gdiplus", "ole32",
       "oleAut32", "shlwapi", "version", "crypt32"
     }
-
-  -- should be called libmupdf-opt but we don't want that .dll name
-  project "libmupdf"
-    kind "SharedLib"
-    language "C"
-    optconf()
-    disablewarnings { "4206", "4702" }
-    defines { "FZ_ENABLE_SVG" }
-
-    -- premake has logic in vs2010_vcxproj.lua that only sets PlatformToolset
-    -- if there is a c/c++ file, so we add a no-op cpp file to force This logic
-    files { "src/libmupdf.rc", "src/no_op_for_premake.cpp" }
-    implibname "libmupdf"
-    -- TODO: is there a better way to do it?
-    -- TODO: only for windows
-    linkoptions { "/DEF:..\\src\\libmupdf.def", "-IGNORE:4702" }
-    links { "mupdf-opt", "libdjvu-opt", "unarrlib-opt", "libwebp-opt" }
-    links {
-      "advapi32", "kernel32", "user32", "gdi32", "comdlg32",
-      "shell32", "windowscodecs", "comctl32", "msimg32",
-      "winspool", "wininet", "urlmon", "gdiplus", "ole32",
-      "oleAut32", "shlwapi", "version", "crypt32"
-    }
-
 
   project "utils"
     kind "StaticLib"
@@ -582,7 +536,19 @@ workspace "SumatraPDF"
     files { "src/tools/signfile.cpp" }
     links { "utils", "mupdf" }
     links { "crypt32", "shlwapi" }
---]]
+
+
+  project "plugin-test"
+    kind "WindowedApp"
+    language "C++"
+    cppdialect "C++latest"
+    regconf()
+    entrypoint "WinMainCRTStartup"
+    includedirs { "src" }
+    files { "src/tools/plugin-test.cpp" }
+    links { "utils", "mupdf" }
+    links { "shlwapi", "version", "comctl32" }
+  --]]
 
   project "enginedump"
     kind "ConsoleApp"
@@ -606,22 +572,18 @@ workspace "SumatraPDF"
     disablewarnings { "4838" }
     defines { "NO_LIBMUPDF" }
     includedirs { "src" }
-    configAsan()
     test_util_files()
     links { "gdiplus", "comctl32", "shlwapi", "Version" }
 
-
-  project "plugin-test"
-    kind "WindowedApp"
+  project "logview"
+    kind "ConsoleApp"
     language "C++"
     cppdialect "C++latest"
     regconf()
-    entrypoint "WinMainCRTStartup"
+    disablewarnings { "4838" }
     includedirs { "src" }
-    files { "src/tools/plugin-test.cpp" }
-    links { "utils", "mupdf" }
-    links { "shlwapi", "version", "comctl32" }
-
+    logview_files()
+    links { "gdiplus", "comctl32", "shlwapi", "Version" }
 
   project "MakeLZSA"
     kind "ConsoleApp"
@@ -632,7 +594,6 @@ workspace "SumatraPDF"
     includedirs { "src", "ext/zlib", "ext/lzma/C", "ext/unarr" }
     links { "unarrlib", "zlib" }
     links { "shlwapi", "version", "comctl32" }
-
 
   project "PdfFilter"
     kind "SharedLib"
@@ -647,7 +608,6 @@ workspace "SumatraPDF"
     pdf_filter_files()
     links { "utils", "unrar", "libmupdf" }
     links { "comctl32", "gdiplus", "shlwapi", "version"  }
-
 
   project "PdfPreview"
     kind "SharedLib"
@@ -682,7 +642,7 @@ workspace "SumatraPDF"
     regconf()
     entrypoint "WinMainCRTStartup"
     flags { "NoManifest" }
-    includedirs { "src", "mupdf/include", "ext/WDL" }
+    includedirs { "src", "mupdf/include" }
 
     synctex_files()
     mui_files()
@@ -706,21 +666,18 @@ workspace "SumatraPDF"
     -- for uia
     disablewarnings { "4302", "4311", "4838" }
 
-    -- for wdl
-    disablewarnings { "4505" }
-
     links {
-      "engines", "libdjvu",  "libwebp", "mupdf", "unarrlib", "utils", "unrar", "wdl"
+      "engines", "libdjvu",  "libwebp", "mupdf", "unarrlib", "utils", "unrar"
     }
     links {
       "comctl32", "delayimp", "gdiplus", "msimg32", "shlwapi", "urlmon",
       "version", "windowscodecs", "wininet", "uiautomationcore.lib"
     }
-    configAsan()
     -- this is to prevent dll hijacking
     linkoptions { "/DELAYLOAD:gdiplus.dll /DELAYLOAD:msimg32.dll /DELAYLOAD:shlwapi.dll" }
     linkoptions { "/DELAYLOAD:urlmon.dll /DELAYLOAD:version.dll /DELAYLOAD:wininet.dll" }
     linkoptions { "/DELAYLOAD:uiautomationcore.dll" }
+    dependson { "PdfFilter", "PdfPreview", "test_util" }
 
 
   -- a dll version where most functionality is in libmupdf.dll
@@ -731,7 +688,7 @@ workspace "SumatraPDF"
     regconf()
     entrypoint "WinMainCRTStartup"
     flags { "NoManifest" }
-    includedirs { "src", "mupdf/include", "ext/WDL" }
+    includedirs { "src", "mupdf/include" }
 
     synctex_files()
     mui_files()
@@ -755,15 +712,12 @@ workspace "SumatraPDF"
     -- for uia
     disablewarnings { "4302", "4311", "4838" }
 
-    -- for wdl
-    disablewarnings { "4505" }
-
     resdefines { "INSTALL_PAYLOAD_ZIP=.\\%{cfg.targetdir}\\InstallerData.dat" }
 
     files { "src/MuPDF_Exports.cpp" }
 
     links {
-      "libmupdf", "unrar", "unarrlib", "utils", "engines", "wdl"
+      "libmupdf", "unrar", "unarrlib", "utils", "engines"
     }
     links {
       "comctl32", "delayimp", "gdiplus", "msimg32", "shlwapi", "urlmon",
@@ -774,5 +728,5 @@ workspace "SumatraPDF"
     linkoptions { "/DELAYLOAD:gdiplus.dll /DELAYLOAD:msimg32.dll /DELAYLOAD:shlwapi.dll" }
     linkoptions { "/DELAYLOAD:urlmon.dll /DELAYLOAD:version.dll /DELAYLOAD:wininet.dll" }
     linkoptions { "/DELAYLOAD:uiautomationcore.dll" }
-    dependson { "PdfFilter", "PdfPreview" }
+    dependson { "PdfFilter", "PdfPreview", "test_util" }
     prebuildcommands { "cd %{cfg.targetdir} & ..\\..\\bin\\MakeLZSA.exe InstallerData.dat libmupdf.dll:libmupdf.dll PdfFilter.dll:PdfFilter.dll PdfPreview.dll:PdfPreview.dll"  }
