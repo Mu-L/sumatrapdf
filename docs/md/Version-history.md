@@ -11,7 +11,7 @@ Available in [pre-release](https://www.sumatrapdfreader.org/prerelease) builds.
 - make thumbnails on home page scrollable
 - add ability to register / unregister Windows preview handler and search filter from `Ctrl + k` command palette. Use "Register Windows Preview", Un-register Windows Preview", "Register Windows Search Filter", "Un-register Windows Search Filter".
 - add `CmdToggleEscToExit` (`Toggle Esc to Exit` in `Ctrl + k` [command palette](Command-Palette.md)) to toggle `EscToExit` advanced setting
-- add `CmdPdfExtractText` (`Extract PDF Text` in `Ctrl + k` [command palette](Command-Palette.md)) to extract text from PDF pages to a .txt file
+- add `CmdPdfExtractText` (`Extract Text from PDF` in `Ctrl + k` [command palette](Command-Palette.md)) to extract text from PDF pages to a .txt file
 - `Ctrl + click` on a PDF link opens it in a new tab (instead of navigating in the current tab)
 - you can now drag&drop selected text to another application, like a text editor
 - added `List Printers` (`CmdListPrinters`) command to `Ctrl + k` Command Palette to list available printers
@@ -37,6 +37,9 @@ Available in [pre-release](https://www.sumatrapdfreader.org/prerelease) builds.
 - improve document properties for comic book files (CBZ, CBR, CB7, CBT). We now show list of image files.
 - improve document properties for image files: size, dimensions, DPI, exif metadata
 
+## 3.6.1 (2026-04-06)
+
+- bugfixes
 
 ## 3.6 (2026-03-17)
 
@@ -208,7 +211,6 @@ Available in [pre-release](https://www.sumatrapdfreader.org/prerelease) builds.
 
 - added support for adding / removing / editing annotations in PDF files. Read [the tutorial](Editing-annotations.md)
 - new toolbar
-
   - changed toolbar to scale with DPI by using new, vector icons
   - added rotate left / right to the toolbar
   - new toolbar:

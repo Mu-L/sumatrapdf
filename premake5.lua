@@ -64,10 +64,6 @@ newoption {
 -- TODO: test this option
 -- usestandardpreprocessor 'On'
 
--- TODO: try appmanifest
--- files { "hello.appxmanifest" }
--- https://github.com/premake/premake-core/pull/1750/files
-
 include("premake5.files.lua")
 
 
@@ -256,6 +252,7 @@ workspace "SumatraPDF"
     targetdir "out/dbg32"
   filter { "platforms:x86", "configurations:DebugFull" }
     targetdir "out/dbgfull32"
+  filter {}
 
   filter { "platforms:x64", "configurations:Release" }
     targetdir "out/rel64"
@@ -402,9 +399,9 @@ workspace "SumatraPDF"
     optimized_conf()
     defines { "_CRT_SECURE_NO_WARNINGS" }
     filter { 'platforms:x86' }
-    defines { "ARCH_X86_32=1", "ARCH_X86_64=0", "__SSE2__" }
+        defines { "ARCH_X86_32=1", "ARCH_X86_64=0", "__SSE2__" }
     filter { 'platforms:x64 or x64_asan' }
-    defines { "ARCH_X86_32=0", "ARCH_X86_64=1" }
+        defines { "ARCH_X86_32=0", "ARCH_X86_64=1" }
     filter {}
     disablewarnings { "4057", "4090", "4100", "4152", "4201", "4244", "4245", "4456", "4457", "4701", "4703", "4706", "4819", "4996", "5287" }
     includedirs { "ext/dav1d/include/compat/msvc", "ext/dav1d", "ext/dav1d/include" }
@@ -518,13 +515,13 @@ workspace "SumatraPDF"
       "HAVE_FREETYPE",
     }
     filter "configurations:Debug or DebugFull"
-    defines {
-      "HAVE_ATEXIT",
-      "hb_malloc_impl=sumatra_hb_malloc",
-      "hb_calloc_impl=sumatra_hb_calloc",
-      "hb_realloc_impl=sumatra_hb_realloc",
-      "hb_free_impl=sumatra_hb_free"
-    }
+        defines {
+          "HAVE_ATEXIT",
+          "hb_malloc_impl=sumatra_hb_malloc",
+          "hb_calloc_impl=sumatra_hb_calloc",
+          "hb_realloc_impl=sumatra_hb_realloc",
+          "hb_free_impl=sumatra_hb_free"
+        }
     filter "configurations:Release or ReleaseAnalyze"
       defines {
         "hb_malloc_impl=fz_hb_malloc",
@@ -562,7 +559,6 @@ workspace "SumatraPDF"
 
     function fonts()
       files {
-
         "mupdf/resources/fonts/urw/Dingbats.cff",
         "mupdf/resources/fonts/urw/NimbusMonoPS-Regular.cff",
         "mupdf/resources/fonts/urw/NimbusMonoPS-Italic.cff",
@@ -593,63 +589,75 @@ workspace "SumatraPDF"
       }
 
       filter { 'files:**.cff', 'platforms:x86' }
-      buildmessage 'bin2coff %{file.basename}.cff (x86)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_cff x86'
-      }
+          buildmessage 'bin2coff %{file.basename}.cff (x86)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_cff x86'
+          }
+      filter {}
+
       filter { 'files:**.cff', 'platforms:x64 or x64_asan' }
-      buildmessage 'bin2coff %{file.basename}.cff (x64)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_cff x86_64'
-      }
+          buildmessage 'bin2coff %{file.basename}.cff (x64)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_cff x86_64'
+          }
+      filter {}
+
       filter { 'files:**.cff', 'platforms:arm64' }
-      buildmessage 'bin2coff %{file.basename}.cff (arm64)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_cff ARM64'
-      }
+          buildmessage 'bin2coff %{file.basename}.cff (arm64)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_cff ARM64'
+          }
       filter {}
 
       filter { 'files:**.ttf', 'platforms:x86' }
-      buildmessage 'bin2coff %{file.basename}.ttf (x86)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_ttf x86'
-      }
+          buildmessage 'bin2coff %{file.basename}.ttf (x86)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_ttf x86'
+          }
+      filter {}
+
       filter { 'files:**.ttf', 'platforms:x64 or x64_asan' }
-      buildmessage 'bin2coff %{file.basename}.ttf (x64)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_ttf x86_64'
-      }
+          buildmessage 'bin2coff %{file.basename}.ttf (x64)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_ttf x86_64'
+          }
+      filter {}
+
       filter { 'files:**.ttf', 'platforms:arm64' }
-      buildmessage 'bin2coff %{file.basename}.ttf (arm64)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_ttf ARM64'
-      }
+          buildmessage 'bin2coff %{file.basename}.ttf (arm64)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_ttf ARM64'
+          }
       filter {}
 
       filter { 'files:**.otf', 'platforms:x86' }
-      buildmessage 'bin2coff %{file.basename}.otf (x86)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_otf x86'
-      }
+          buildmessage 'bin2coff %{file.basename}.otf (x86)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_otf x86'
+          }
+      filter {}
+
       filter { 'files:**.otf', 'platforms:x64 or x64_asan' }
-      buildmessage 'bin2coff %{file.basename}.otf (x64)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_otf x86_64'
-      }
+          buildmessage 'bin2coff %{file.basename}.otf (x64)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_otf x86_64'
+          }
+      filter {}
+
       filter { 'files:**.otf', 'platforms:arm64' }
-      buildmessage 'bin2coff %{file.basename}.otf (arm64)'
-      buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
-      buildcommands {
-        '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_otf ARM64'
-      }
+          buildmessage 'bin2coff %{file.basename}.otf (arm64)'
+          buildoutputs { '%{cfg.objdir}/%{file.basename}.obj' }
+          buildcommands {
+            '..\\bin\\bin2coff.exe "%{file.relpath}" "%{cfg.objdir}/%{file.basename}.obj" _binary_%{file.basename}_otf ARM64'
+          }
       filter {}
     end
 
@@ -668,7 +676,7 @@ workspace "SumatraPDF"
     defines { "HAVE_LIBARCHIVE", "LIBARCHIVE_STATIC" }
 
     filter { "platforms:arm64" }
-    defines { "ARCH_HAS_NEON=1" }
+        defines { "ARCH_HAS_NEON=1" }
     filter {}
 
     disablewarnings {
@@ -705,33 +713,6 @@ workspace "SumatraPDF"
     -- this fixes "NAN" is not a constant in some version of msvc
     -- without this it's #define _UCRT_NAN (__ucrt_int_to_float(0x7FC00000))
     defines { "_UCRT_NOISY_NAN" }
-
-  project "libmupdf"
-    kind "SharedLib"
-    language "C"
-    optimized_conf()
-    disablewarnings { "4206", "4702" }
-    defines { "FZ_ENABLE_PDF=1", "FZ_ENABLE_SVG=1", "FZ_ENABLE_BROTLI=1", "FZ_ENABLE_BARCODE=0", "FZ_ENABLE_JS=1", "FZ_ENABLE_HYPHEN=0" }
-
-    filter { "platforms:arm64" }
-    defines { "ARCH_HAS_NEON=1" }
-    filter {}
-
-    -- premake has logic in vs2010_vcxproj.lua that only sets PlatformToolset
-    -- if there is a c/c++ file, so we add a no-op cpp file to force This logic
-    files { "src/libmupdf.rc", "src/libmupdf.def", "src/no_op_for_premake.cpp" }
-    implibname "libmupdf"
-    -- TODO: is thre a better way to do it?
-    -- linkoptions { "/DEF:..\\src\\libmupdf.def", "-IGNORE:4702" }
-    linkoptions { "-IGNORE:4702" }
-    links_zlib()
-    links { "mupdf", "libdjvu", "libwebp", "dav1d", "libheif" }
-    links {
-      "advapi32", "kernel32", "user32", "gdi32", "comdlg32",
-      "shell32", "windowscodecs", "comctl32", "msimg32",
-      "winspool", "wininet", "urlmon", "gdiplus", "ole32",
-      "oleAut32", "shlwapi", "version", "crypt32"
-    }
 
   project "utils"
     kind "StaticLib"
@@ -776,20 +757,24 @@ workspace "SumatraPDF"
     bin2coff_files()
     links { "gdiplus", "comctl32", "shlwapi", "Version" }
 
-  project "PdfFilter"
-    kind "SharedLib"
+--[[
+  project "MakeLZSA"
+    kind "ConsoleApp"
     language "C++"
     cppdialect "C++latest"
     mixed_dbg_rel_conf()
-    disablewarnings { "4100", "4838" }
-    defines { "HAVE_LIBARCHIVE", "LIBARCHIVE_STATIC" }
-    filter { "configurations:Debug" }
-    defines { "BUILD_TEX_IFILTER", "BUILD_EPUB_IFILTER" }
-    filter {}
-    includedirs { "src", "src/wingui", "mupdf/include", "ext/libarchive" }
-    search_filter_files()
-    links { "utils", "unrar", "libmupdf", "libarchive" }
-    links { "comctl32", "gdiplus", "shlwapi", "version", "wininet", "wintrust", "crypt32" }
+
+    makelzsa_files()
+    disablewarnings { "4131", "4244", "4245", "4267", "4996" }
+    includedirs { "src", "ext/lzma/C" }
+
+    -- for zlib
+    disablewarnings { "4131", "4244", "4245", "4267", "4996" }
+    zlib_files()
+    uses_zlib()
+
+    links { "shlwapi", "version", "comctl32", "wininet", "Crypt32" }
+--]]
 
   project "PdfFilter2"
     kind "SharedLib"
@@ -813,24 +798,6 @@ workspace "SumatraPDF"
     pdf_preview2_files()
     -- TODO: "chm" should only be for Debug config but doing links { "chm" }
     -- in the filter breaks linking by setting LinkLibraryDependencies to false
-    links { "comctl32", "gdiplus", "msimg32", "shlwapi", "version", "wininet", "wintrust", "crypt32" }
-
-  project "PdfPreview"
-    kind "SharedLib"
-    language "C++"
-    cppdialect "C++latest"
-    mixed_dbg_rel_conf()
-    disablewarnings { "4100", "4838" }
-    defines { "HAVE_LIBARCHIVE", "LIBARCHIVE_STATIC" }
-    includedirs {
-      "src", "src/wingui", "mupdf/include",
-      "ext/libdjvu", "ext/CHMLib",
-      "ext/libarchive",
-    }
-    pdf_preview_files()
-    -- TODO: "chm" should only be for Debug config but doing links { "chm" }
-    -- in the filter breaks linking by setting LinkLibraryDependencies to false
-    links { "utils", "unrar", "libmupdf", "libarchive", "chm" }
     links { "comctl32", "gdiplus", "msimg32", "shlwapi", "version", "wininet", "wintrust", "crypt32" }
 
   -- a single static executable
@@ -892,79 +859,12 @@ workspace "SumatraPDF"
     linkoptions { "/DELAYLOAD:urlmon.dll /DELAYLOAD:wininet.dll" }
     linkoptions { "/DELAYLOAD:uiautomationcore.dll" }
     filter "platforms:x64_asan"
-    linkoptions { "/INFERASANLIBS" }
+        linkoptions { "/INFERASANLIBS" }
     filter {}
+    resdefines { "INSTALL_PAYLOAD_ZIP=.\\%{cfg.targetdir}\\InstallerData.dat" }
     dependson { "PdfFilter2", "PdfPreview2", "test_util" }
     prebuildcommands { "..\\bin\\MakeLZSA.exe ..\\translations\\translations.txt.lzsa ..\\translations\\translations-good.txt:translations-good.txt" }
-
-  -- a dll version where most functionality is in libmupdf.dll
-  project "SumatraPDF-dll"
-    kind "WindowedApp"
-    language "C++"
-    cppdialect "C++latest"
-    mixed_dbg_rel_conf()
-    warnings_as_errors()
-    entrypoint "WinMainCRTStartup"
-    manifest("Off")
-    defines { "LIBARCHIVE_STATIC" }
-    includedirs { "src", "mupdf/include" }
-    includedirs { "ext/synctex", "ext/libdjvu", "ext/CHMLib", "ext/libarchive" }
-    includedirs { "ext/darkmodelib/include" }
-
-    includedirs { "ext/darkmodelib/include" }
-    defines { "_DARKMODELIB_NO_INI_CONFIG" }
-    darkmodelib_files()
-
-    synctex_files()
-    mui_files()
-    wingui_files()
-    uia_files()
-    engines_files()
-    sumatrapdf_files()
-
-    webview_conf()
-
-    debugdir(".")
-
-    defines { "_CRT_SECURE_NO_WARNINGS" }
-    defines { "DISABLE_DOCUMENT_RESTRICTIONS" }
-
-    filter "configurations:ReleaseAnalyze"
-    -- TODO: somehow /analyze- is default which creates warning about
-    -- over-ride from cl.exe. Don't know how to disable the warning
-    buildoptions { "/analyze" }
-    disablewarnings { "28125", "28252", "28253" }
-    filter {}
-
-    -- for synctex
-    disablewarnings { "4100", "4244", "4267", "4702", "4706" }
-    uses_zlib()
-    includedirs { "ext/synctex" }
-
-    -- for uia
-    disablewarnings { "4302", "4311", "4838" }
-
-    disablewarnings { "4819" }
-
-    resdefines { "INSTALL_PAYLOAD_ZIP=.\\%{cfg.targetdir}\\InstallerData.dat" }
-
-    files { "src/MuPDF_Exports.cpp" }
-
-    links {
-      "libmupdf", "unrar", "libarchive", "utils", "chm"
-    }
-    links {
-      "comctl32", "delayimp", "gdiplus", "msimg32", "shlwapi", "urlmon",
-      "version", "wininet", "d2d1.lib", "uiautomationcore.lib", "uxtheme", "wintrust", "crypt32"
-    }
-    -- this is to prevent dll hijacking
-    linkoptions { "/DELAYLOAD:libmupdf.dll" }
-    linkoptions { "/DELAYLOAD:gdiplus.dll /DELAYLOAD:msimg32.dll /DELAYLOAD:shlwapi.dll" }
-    linkoptions { "/DELAYLOAD:urlmon.dll /DELAYLOAD:wininet.dll" }
-    linkoptions { "/DELAYLOAD:uiautomationcore.dll" }
-    dependson { "PdfFilter", "PdfPreview", "test_util" }
-    prebuildcommands { "..\\bin\\MakeLZSA.exe ..\\translations\\translations.txt.lzsa ..\\translations\\translations-good.txt:translations-good.txt" }
-    prebuildcommands { "cd %{cfg.targetdir} & ..\\..\\bin\\MakeLZSA.exe InstallerData.dat libmupdf.dll:libmupdf.dll PdfFilter.dll:PdfFilter.dll PdfPreview.dll:PdfPreview.dll" }
+    prebuildcommands { "cd %{cfg.targetdir} & ..\\..\\bin\\MakeLZSA.exe InstallerData.dat PdfFilter2.dll:PdfFilter2.dll PdfPreview2.dll:PdfPreview2.dll" }
 
 workspace "MakeLZSA"
   configurations { "Debug", "Release" }

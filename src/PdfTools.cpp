@@ -282,7 +282,7 @@ static void PdfExtractTextDoIt(PdfExtractTextDialog* dlg) {
         DestroyWindow(dlg->hwnd);
         OpenPathInDefaultFileManager(destPath);
     } else {
-        MessageBoxWarning(dlg->hwnd, "Failed to extract text from PDF.", "Extract PDF Text");
+        MessageBoxWarning(dlg->hwnd, "Failed to extract text from PDF.", "Extract Text from PDF");
     }
 }
 

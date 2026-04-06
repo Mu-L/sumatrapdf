@@ -33,6 +33,7 @@ function makelzsa_files()
 
   files {
     "src/tools/MakeLzSA.cpp",
+    "src/CrashHandlerNoOp.cpp",
   }
 end
 
@@ -163,19 +164,6 @@ function libdjvu_files()
     "IW44Image.cpp", "JB2EncodeCodec.cpp", "JB2Image.cpp",
     "JPEGDecoder.cpp", "miniexp.cpp", "MMRDecoder.cpp", "MMX.cpp",
     "UnicodeByteStream.cpp", "XMLParser.cpp", "XMLTags.cpp", "ZPCodec.cpp",
-  })
-end
-
-function unarrr_lzmasdk_files()
-  files_in_dir("ext/unarr/lzmasdk", {
-    "CpuArch.c", "Ppmd7.c", "Ppmd7Dec.c", "Ppmd8.c", "Ppmd8Dec.c",
-  })
-end
-
-function unarr_lzma_files()
-  files_in_dir("ext/lzma/C", {
-    "7zBuf.c", "7zDec.c", "7zIn.c", "7zStream.c", "Bcj2.c", "Bra.c", "Bra86.c",
-    "LzFind.c", "LzFindMt.c", "Lzma2Dec.c", "LzmaDec.c", "LzmaEnc.c", "Threads.c",
   })
 end
 
@@ -827,6 +815,7 @@ function sumatrapdf_files()
     "regress/Regress.*",
     "Scratch.*",
     "TestPlugin.cpp",
+    "TestFilter.cpp",
     "TestPreview.cpp",
   })
   files_in_dir("src/testcode", {
@@ -1336,80 +1325,6 @@ function test_util_files()
     "SumatraUnitTests.cpp",
     "tools/test_util.cpp"
   })
-end
-
-function pdf_preview_files()
-  files_in_dir("src/previewer", {
-    "PdfPreview.*",
-    "PdfPreviewBase.h",
-    "PdfPreviewDll.cpp",
-  })
-  files_in_dir("src/utils", {
-    "Archive.*",
-  })
-  files_in_dir("src", {
-    "ChmFile.*",
-    "CrashHandlerNoOp.cpp",
-    "DocProperties.*",
-    "EbookDoc.*",
-    "EbookFormatter.*",
-    "EngineAll.h",
-    "EngineBase.*",
-    "EngineDjVu.*",
-    "EngineEbook.*",
-    "EngineImages.*",
-    "EngineMupdf.*",
-    "EngineMupdfImpl.*",
-    "FzImgReader.*",
-    "HtmlFormatter.*",
-    "MobiDoc.*",
-    "mui/Mui.*",
-    "mui/TextRender.*",
-    "MUPDF_Exports.cpp",
-    "PalmDbReader.*",
-    "PdfCreator.*",
-    "RegistryPreview.*",
-    "SumatraConfig.*",
-    "utils/Log.*",
-  })
-end
-
-function search_filter_files()
-  files_in_dir("src/ifilter", {
-    "CPdfFilter.*",
-    "FilterBase.h",
-    "PdfFilter.*",
-    "SearchFilterDll.cpp",
-  })
-  files_in_dir("src/utils", {
-    "Archive.*",
-  })
-  files_in_dir("src", {
-    "CrashHandlerNoOp.cpp",
-    "DocProperties.*",
-    "EbookDoc.*",
-    "EngineAll.h",
-    "EngineBase.*",
-    "EngineMupdf.*",
-    "EngineMupdfImpl.*",
-    "MobiDoc.*",
-    "MUPDF_Exports.cpp",
-    "PalmDbReader.*",
-    "RegistrySearchFilter.*",
-    "utils/Log.*",
-  })
-
-  filter { "configurations:Debug or DebugFull" }
-  files_in_dir("src/ifilter", {
-    "TeXFilter.*",
-    "EpubFilter.*",
-  })
-  files {
-    "src/EbookDoc.*",
-    "src/MobiDoc.*",
-    "src/PalmDbReader.*",
-  }
-  filter {}
 end
 
 function pdf_preview2_files()
