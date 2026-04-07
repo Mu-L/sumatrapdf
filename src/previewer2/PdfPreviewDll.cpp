@@ -18,21 +18,6 @@ constexpr COLORREF kColWindowBg = RGB(0x99, 0x99, 0x99);
 constexpr int kPreviewMargin = 2;
 constexpr UINT kUwmPaintAgain = (WM_USER + 101);
 
-static void LogToDebugFile(const char* msg) {
-    // write to a temp file so we can see logs from prevhost.exe
-    // which doesn't connect to logview's named pipe
-    char path[MAX_PATH]{};
-    GetTempPathA(MAX_PATH, path);
-    strcat_s(path, MAX_PATH, "sumatrapdf-preview2-debug.txt");
-    HANDLE hFile = CreateFileA(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS,
-                               FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hFile != INVALID_HANDLE_VALUE) {
-        DWORD written;
-        WriteFile(hFile, msg, (DWORD)strlen(msg), &written, nullptr);
-        CloseHandle(hFile);
-    }
-}
-
 class PageRenderer;
 
 enum class PreviewMode {
@@ -69,7 +54,13 @@ class PdfPreview : public IThumbnailProvider,
                                            QITABENT(PdfPreview, IOleWindow),
                                            {0}};
         const QITAB* qit = (m_mode == PreviewMode::Thumbnail) ? qitThumb : qitPreview;
-        return QISearch(this, qit, riid, ppv);
+        HRESULT hr = QISearch(this, qit, riid, ppv);
+        LPOLESTR riidStr = nullptr;
+        StringFromIID(riid, &riidStr);
+        const char* modeStr = (m_mode == PreviewMode::Thumbnail) ? "thumb" : "preview";
+        logf("PdfPreview::QI(%S) mode=%s => 0x%08x\n", riidStr ? riidStr : L"?", modeStr, (int)hr);
+        CoTaskMemFree(riidStr);
+        return hr;
     }
     IFACEMETHODIMP_(ULONG) AddRef() { return InterlockedIncrement(&m_lRef); }
     IFACEMETHODIMP_(ULONG) Release() {
@@ -117,7 +108,7 @@ class PdfPreview : public IThumbnailProvider,
     // IPreviewHandler
     IFACEMETHODIMP SetWindow(HWND hwnd, const RECT* prc) {
         logf("PdfPreview::SetWindow(hwnd=%p)\n", hwnd);
-        LogToDebugFile("PdfPreview2: SetWindow()\n");
+
         if (!hwnd || !prc) {
             return S_OK;
         }
@@ -720,7 +711,6 @@ static LRESULT CALLBACK PreviewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
 
 IFACEMETHODIMP PdfPreview::DoPreview() {
     log("PdfPreview::DoPreview()\n");
-    LogToDebugFile("PdfPreview2: DoPreview()\n");
 
     WNDCLASSEX wcex{};
     wcex.cbSize = sizeof(wcex);
@@ -802,7 +792,6 @@ class PreviewClassFactory : public IClassFactory {
     // IClassFactory
     IFACEMETHODIMP CreateInstance(IUnknown* punkOuter, REFIID riid, void** ppv) {
         log("PdfPreview: CreateInstance()\n");
-        LogToDebugFile("PdfPreview2: CreateInstance()\n");
 
         *ppv = nullptr;
         if (punkOuter) {
@@ -908,14 +897,18 @@ static const char* GetReason(DWORD dwReason) {
 STDAPI_(BOOL) DllMain(HINSTANCE hInstance, DWORD dwReason, void*) {
     if (dwReason == DLL_PROCESS_ATTACH) {
         ReportIf(hInstance != GetInstance());
+        // log to file so we can see logs from prevhost.exe
+        // which doesn't connect to logview's named pipe
+        char path[MAX_PATH]{};
+        GetTempPathA(MAX_PATH, path);
+        strcat_s(path, MAX_PATH, "sumatrapdf-preview2-debug.txt");
+        StartLogToFile(path, false);
     }
     gLogAppName = "PdfPreview";
+    if (dwReason == DLL_PROCESS_ATTACH) {
+        logf("preview ver: 1\n");
+    }
     logf("PdfPreview: DllMain %s (pid=%d)\n", GetReason(dwReason), (int)GetCurrentProcessId());
-
-    // also log to a temp file for debugging prevhost.exe loads
-    char buf[256];
-    wsprintfA(buf, "PdfPreview2: DllMain %s (pid=%d)\n", GetReason(dwReason), (int)GetCurrentProcessId());
-    LogToDebugFile(buf);
     return TRUE;
 }
 
