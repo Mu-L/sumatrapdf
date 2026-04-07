@@ -3,6 +3,7 @@
 
 #include "utils/BaseUtil.h"
 #include "utils/ScopedWin.h"
+#include "utils/FileUtil.h"
 #include "utils/WinUtil.h"
 
 #include <Thumbcache.h>
@@ -275,8 +276,37 @@ IFACEMETHODIMP PdfPreview::GetThumbnail(uint cx, HBITMAP* phbmp, WTS_ALPHATYPE* 
     // Verify bitmap before returning to Explorer
     BITMAP bm{};
     if (GetObject(hBitmap, sizeof(bm), &bm)) {
-        logf("PdfPreview::GetThumbnail: returning HBITMAP %dx%d, bitsPixel=%d\n", bm.bmWidth, bm.bmHeight,
-             bm.bmBitsPixel);
+        logf("PdfPreview::GetThumbnail: returning HBITMAP %dx%d, bitsPixel=%d, bmHeight=%d (negative=top-down)\n",
+             bm.bmWidth, bm.bmHeight, bm.bmBitsPixel, bm.bmHeight);
+    }
+
+    // Debug: save thumbnail to temp file for visual verification
+    {
+        TempStr tmpDir = GetTempDirTemp();
+        TempStr debugPath = path::JoinTemp(tmpDir, "sumatrapdf-thumb-debug.bmp");
+        // Write BMP file
+        int absHeight = bm.bmHeight < 0 ? -bm.bmHeight : bm.bmHeight;
+        u32 dataSize = (u32)(bm.bmWidth * absHeight * 4);
+        BITMAPFILEHEADER bfh{};
+        bfh.bfType = 0x4D42; // "BM"
+        bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+        bfh.bfSize = bfh.bfOffBits + dataSize;
+        BITMAPINFOHEADER bih{};
+        bih.biSize = sizeof(bih);
+        bih.biWidth = bm.bmWidth;
+        bih.biHeight = bm.bmHeight; // preserve top-down/bottom-up
+        bih.biPlanes = 1;
+        bih.biBitCount = 32;
+        bih.biCompression = BI_RGB;
+        HANDLE hFile = CreateFileA(debugPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hFile != INVALID_HANDLE_VALUE) {
+            DWORD written;
+            WriteFile(hFile, &bfh, sizeof(bfh), &written, nullptr);
+            WriteFile(hFile, &bih, sizeof(bih), &written, nullptr);
+            WriteFile(hFile, bm.bmBits, dataSize, &written, nullptr);
+            CloseHandle(hFile);
+            logf("PdfPreview::GetThumbnail: debug bitmap saved to '%s'\n", debugPath);
+        }
     }
 
     *phbmp = hBitmap;

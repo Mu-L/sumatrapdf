@@ -193,11 +193,11 @@ HBITMAP ReceivePreviewResponse(HANDLE hPipe) {
         totalRead += bytesRead;
     }
 
-    // Create DIB section from the bitmap data
+    // Create top-down DIB section (Explorer expects top-down for thumbnails)
     BITMAPINFO bmi{};
     bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
     bmi.bmiHeader.biWidth = width;
-    bmi.bmiHeader.biHeight = height; // positive = bottom-up DIB
+    bmi.bmiHeader.biHeight = -(LONG)height; // negative = top-down DIB
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
@@ -210,8 +210,13 @@ HBITMAP ReceivePreviewResponse(HANDLE hPipe) {
         return nullptr;
     }
 
-    // Copy the bitmap data
-    memcpy(dibData, bmpData, bmpDataLen);
+    // Source data from GetDIBits is bottom-up, flip rows for top-down DIB
+    u32 rowBytes = width * 4;
+    for (u32 y = 0; y < height; y++) {
+        u8* srcRow = bmpData + (height - 1 - y) * rowBytes;
+        u8* dstRow = dibData + y * rowBytes;
+        memcpy(dstRow, srcRow, rowBytes);
+    }
 
     // Log sample pixels for debugging
     logf("ReceivePreviewResponse: pixel[0] BGRA=%02x%02x%02x%02x\n", dibData[0], dibData[1], dibData[2], dibData[3]);
